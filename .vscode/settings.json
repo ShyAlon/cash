@@ -1,0 +1,3 @@
+{
+    "python.pythonPath": "${workspaceRoot}/server/bin/python2.7"
+}
