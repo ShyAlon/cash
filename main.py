@@ -1,4 +1,5 @@
 from tsne import Reducer
+import pandas as pd
 
 def read_data():
     """read the data from whereever"""
