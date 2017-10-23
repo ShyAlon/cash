@@ -38,6 +38,17 @@ def read_data(file_name):
     colors = vfunc(tags)
     return (data, names, columns, colors)
 
+def create_new_member(data):
+    member = Member()
+    columns = data.shape[1] 
+    vectors = []
+    for column_index in range(0, columns):
+        if np.random.randint(0,2) > 0:
+            member.features.append(column_index)
+            vectors.append(data[:, column_index])
+    member.map = np.column_stack(vectors)
+    return member
+
 def create_first_generation(data, colors):
     """
     Create the first generation of the data.
@@ -47,19 +58,11 @@ def create_first_generation(data, colors):
     Returns:
         list of results: The generation of results with their respective quality and features."""
     rows = data.shape[0]
-    columns = data.shape[1] 
     result = []
     for gen_member_index in range(0, gen_size):
-        member = Member()
-        result.append(member)
-        vectors = []
-        for column_index in range(0, columns):
-            if np.random.randint(0,2) > 0:
-                member.features.append(column_index)
-                vectors.append(data[:, column_index])
-        member.map = np.column_stack(vectors)
+        result.append(create_new_member(data))
 
-    order_by_quality(result, colors):
+    order_by_quality(result, colors)
     return result
 
 def get_nearest_point(point_index, x, y):
@@ -78,6 +81,7 @@ def order_by_quality(current, colors):
         set_quality(member, colors)
 
     current.sort(key = lambda x: x.quality, reverse=True)
+    print("Top quality {}".format(current[0].quality))
 
 def set_quality(member, colors):
     output = TSNE().fit_transform(member.map)
@@ -92,6 +96,16 @@ def set_quality(member, colors):
                 ratio += 1.0
     member.quality = ratio / total
 
+def cross_breed(father, mother, data):
+    member = Member()
+    features = list(set(mother.features + father.features))
+    vectors = []
+    for column_index in range(0, len(features)):
+        if np.random.randint(0,2) > 0:
+            member.features.append(column_index)
+            vectors.append(data[:, column_index])
+    member.map = np.column_stack(vectors)
+    return member
 
 def next_generation(data, current, colors):
     """
@@ -102,17 +116,22 @@ def next_generation(data, current, colors):
 
     Returns:
         list: The generation of results with their respective quality and features."""
+    next = []
+    for copies in range(0, gen_size/3):
+        next.append(current[copies])
 
-    implement the genetic algorithm here
+    for cross in range(0, gen_size/4):
+        next.append(cross_breed(current[cross], current[cross+1], data))
+        next.append(cross_breed(current[cross], current[cross+2], data))
     
-    for member in current:
-        set_quality(member, colors)
+    for new in range(0, gen_size - len(next)):
+        next.append(create_new_member(data))
 
-    current.sort(key = lambda x: x.quality, reverse=True)
+    order_by_quality(next, colors)
         # matplotlib.pyplot.scatter(x,y, color = colors)
         # matplotlib.pyplot.show()
     # print (dataBase_emb)
-    return []
+    return next
 
 if __name__ == '__main__':
     (data, names, columns, colors) = read_data('./data/20170929-180854_combined_data_try_0.csv')
