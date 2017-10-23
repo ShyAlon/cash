@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:/Anaconda2/python",
+    "python.pythonPath": "${workspaceRoot}/server/bin/python",
     "python.autoComplete.extraPaths": [
         "${env.SPARK_HOME}\\python",
         "${env.SPARK_HOME}\\python\\pyspark"

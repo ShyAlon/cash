@@ -2,7 +2,7 @@ from tsne import Reducer
 from member import Member
 import numpy as np
 from sklearn.manifold import TSNE
-import matplotlib.pyplot
+# import matplotlib.pyplot
 
 gen_size = 20
 
@@ -60,6 +60,31 @@ def create_first_generation(data):
         member.map = np.column_stack(vectors)
     return result
 
+def get_nearest_point(point_index, x, y):
+    result = -1
+    min_distance = float("inf")
+    for index in range(0, len(x)):
+        if index != point_index:
+            distance_squared = (x[point_index] - x[index])**2 + (y[point_index] - y[index])**2 
+            if distance_squared < min_distance:
+                result = index
+                min_distance = distance_squared
+    return result
+
+def set_quality(member, colors):
+    output = TSNE().fit_transform(member.map)
+    x,y = output.T
+    total = 0.0
+    ratio = 0.0
+    for point_index in range(0, len(x)):
+        if colors[point_index] != "gray":
+            total += 1.0
+            nearest_index = get_nearest_point(point_index, x, y)
+            if colors[nearest_index] == colors[point_index]:
+                ratio += 1.0
+    member.quality = ratio / total
+
+
 def next_generation(data, current, colors):
     """
     Create the next generation from the previous one
@@ -70,8 +95,9 @@ def next_generation(data, current, colors):
     Returns:
         list: The generation of results with their respective quality and features."""
     for member in current:
-        output = TSNE().fit_transform(member.map)
-        x,y = output.T
+        set_quality(member, colors)
+
+    current.sort(key = lambda x: x.quality)
         # matplotlib.pyplot.scatter(x,y, color = colors)
         # matplotlib.pyplot.show()
     # print (dataBase_emb)
