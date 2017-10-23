@@ -38,7 +38,7 @@ def read_data(file_name):
     colors = vfunc(tags)
     return (data, names, columns, colors)
 
-def create_first_generation(data):
+def create_first_generation(data, colors):
     """
     Create the first generation of the data.
     Args:
@@ -52,12 +52,14 @@ def create_first_generation(data):
     for gen_member_index in range(0, gen_size):
         member = Member()
         result.append(member)
-        vectors = [];
+        vectors = []
         for column_index in range(0, columns):
             if np.random.randint(0,2) > 0:
                 member.features.append(column_index)
                 vectors.append(data[:, column_index])
         member.map = np.column_stack(vectors)
+
+    order_by_quality(result, colors):
     return result
 
 def get_nearest_point(point_index, x, y):
@@ -70,6 +72,12 @@ def get_nearest_point(point_index, x, y):
                 result = index
                 min_distance = distance_squared
     return result
+
+def order_by_quality(current, colors):
+    for member in current:
+        set_quality(member, colors)
+
+    current.sort(key = lambda x: x.quality, reverse=True)
 
 def set_quality(member, colors):
     output = TSNE().fit_transform(member.map)
@@ -94,10 +102,13 @@ def next_generation(data, current, colors):
 
     Returns:
         list: The generation of results with their respective quality and features."""
+
+    implement the genetic algorithm here
+    
     for member in current:
         set_quality(member, colors)
 
-    current.sort(key = lambda x: x.quality)
+    current.sort(key = lambda x: x.quality, reverse=True)
         # matplotlib.pyplot.scatter(x,y, color = colors)
         # matplotlib.pyplot.show()
     # print (dataBase_emb)
@@ -105,7 +116,7 @@ def next_generation(data, current, colors):
 
 if __name__ == '__main__':
     (data, names, columns, colors) = read_data('./data/20170929-180854_combined_data_try_0.csv')
-    generation = create_first_generation(data)
+    generation = create_first_generation(data, colors)
     for iteration in range(0, 20):
         generation = next_generation(data, generation, colors)
     
