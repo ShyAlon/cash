@@ -5,3 +5,5 @@ class Member:
          self.quality = 0
          self.map = None
          self.features = []
+         self.x = []
+         self.y = []

@@ -2,7 +2,7 @@ from tsne import Reducer
 from member import Member
 import numpy as np
 from sklearn.manifold import TSNE
-# import matplotlib.pyplot
+import matplotlib.pyplot
 
 gen_size = 20
 
@@ -86,6 +86,8 @@ def order_by_quality(current, colors):
 def set_quality(member, colors):
     output = TSNE().fit_transform(member.map)
     x,y = output.T
+    member.x = x
+    member.y = y
     total = 0.0
     ratio = 0.0
     for point_index in range(0, len(x)):
@@ -128,15 +130,16 @@ def next_generation(data, current, colors):
         next.append(create_new_member(data))
 
     order_by_quality(next, colors)
-        # matplotlib.pyplot.scatter(x,y, color = colors)
-        # matplotlib.pyplot.show()
+       
     # print (dataBase_emb)
     return next
 
 if __name__ == '__main__':
-    (data, names, columns, colors) = read_data('./data/20170929-180854_combined_data_try_0.csv')
+    (data, names, columns, colors) = read_data('./data/20171017-214145_combined_data_try_0.csv')
     generation = create_first_generation(data, colors)
     for iteration in range(0, 20):
         generation = next_generation(data, generation, colors)
     
+    matplotlib.pyplot.scatter(generation[0].x,generation[0].y, color = colors)
+    matplotlib.pyplot.show()
     # the first result of the last generation is the best.
