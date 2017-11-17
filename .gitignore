@@ -100,3 +100,6 @@ server/
 
 # mypy
 .mypy_cache/
+.idea/
+results/
+old server/
