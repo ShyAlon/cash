@@ -38,3 +38,7 @@ class Database:
             ]):
                 self.data = result
                 return result
+
+    def insert_result(self, result):
+        retval = self.db.results.insert_one(result)
+        print (retval.inserted_id)
