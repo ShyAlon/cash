@@ -10,7 +10,7 @@ class Database:
                         ",cluster0-shard-00-01-fsl8x.mongodb.net:27017" + \
                         ",cluster0-shard-00-02-fsl8x.mongodb.net:27017" + \
                         "/test?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin"
-        self.client = pymongo.MongoClient(connection_string)
+        self.client = pymongo.MongoClient(self.connection_string)
         self.db = self.client.test
         # self.posts = self.db.posts
         # for index in range(0, 3):
