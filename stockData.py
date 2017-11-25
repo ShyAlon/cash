@@ -1,9 +1,9 @@
 import numpy as np
 
-def read_data():
+def read_data(file_name):
     """ read the data from whereever
         remove """
-    file_name = './data/20171017-214145_combined_data_try_0.csv'
+    # file_name = './data/20171017-214145_combined_data_try_0.csv'
     raw = np.genfromtxt(file_name,delimiter=',')
     data = raw[3:, 1:]
     strings = np.genfromtxt(file_name,delimiter=',', dtype=None)
@@ -31,4 +31,4 @@ def to_color(num):
     if num == 1:
         return 'blue'
     if num >= 2:
-        return 'green'
+        return 'lime'

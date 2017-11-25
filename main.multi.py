@@ -10,8 +10,11 @@ from stockData import read_data
 # from bitterData import read_data
 import json
 import calendar
+import os
+from glob import glob
 
-gen_size = 20
+gen_size = 30
+iterations_per_file = 30
 
 def create_new_member(data):
     member = Member()
@@ -51,6 +54,15 @@ def get_nearest_point(point_index, x, y):
                 result = index
                 min_distance = distance_squared
     return result
+
+def get_nearest_points(point_index, x, y):
+    distances = []
+    for index in range(0, len(x)):
+        if index != point_index:
+            distance_squared = (x[point_index] - x[index])**2 + (y[point_index] - y[index])**2
+            distances.append((index, distance_squared))
+    distances.sort(key=lambda distance: distance[1])
+    return distances
 
 def order_by_quality(current, colors):
     finished = Queue()
@@ -99,12 +111,22 @@ def set_quality(member, colors, finished, started):
         total = 0.0
         ratio = 0.0
         for point_index in range(0, len(x)):
-            if colors[point_index] != "gray":
+            if colors[point_index] != "gray" and colors[point_index] != "black":
                 total += 1.0
                 nearest_index = get_nearest_point(point_index, x, y)
                 if colors[nearest_index] == colors[point_index]:
                     ratio += 1.0
         member.quality = ratio / total
+        for point_index in range(0, len(x)):
+            if colors[point_index] == "gray":
+                nearest_indice = get_nearest_points(point_index, x, y)
+                recommendations = 0
+                for i in range(0, 3):
+                    if colors[nearest_indice[i][0]] == "lime":
+                        recommendations += 1
+                if recommendations > 1:
+                    colors[point_index] = "black"
+                    member.recommendations.append(point_index)
         print("finished calculating t-SNE member {} quality {}".format(started, member.quality))
         finished.put(member)
     except Exception :
@@ -168,31 +190,51 @@ def next_generation(data, current, colors):
     return next
 
 if __name__ == '__main__':
-    (data, names, colors) = read_data()
-    last_quality = 0
-    no_improvement = 0
-    generation = create_first_generation(data, colors)
-    for iteration in range(0, 10):
-        generation = next_generation(data, generation, colors)
-        print ("***\nFinished generation {}\n***").format(iteration)
-        now = calendar.timegm(time.gmtime())
-        plt.scatter(generation[0].x, generation[0].y, color=colors)
-        plt.savefig("./results/result{}_{}.png".format(now, generation[0].quality))
-        with open('./results/generation_{}_{}.json'.format(now, iteration, generation[0].quality), 'w') as fp:
-            save_me = []
-            for member in generation:
-                save_me.append({
-                    "features": member.features,
-                    "quality": member.quality
-                })
-            json.dump(save_me, fp)
-        if generation[0].quality > last_quality:
-            last_quality = generation[0].quality
-            no_improvement = 0
-        else:
-            no_improvement += 1
-            if no_improvement > 8: # 4 generations didn't budge
-                print("no improvement - quitting")
-                break
-    plt.show()
+    files = glob("./data/*.csv")
+    file_counter = 0
+    for data_file in files:
+        file_counter += 1
+        (data, names, colors) = read_data(data_file)
+        last_quality = 0
+        no_improvement = 0
+        generation = create_first_generation(data, colors)
+        for iteration in range(0, iterations_per_file):
+            try:
+                generation = next_generation(data, generation, colors)
+                print ("***\nFinished generation {}\n***").format(iteration)
+                now = calendar.timegm(time.gmtime())
+                if generation[0].quality > last_quality:
+                    last_quality = generation[0].quality
+                    temp_colors = list(colors)
+                    for recommended in generation[0].recommendations:
+                        temp_colors[recommended] = "black"
+                    no_improvement = 0
+                    plt.gcf().clear()
+                    plt.scatter(generation[0].x, generation[0].y, color=temp_colors)
+                    plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
+
+                    with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration, generation[0].quality), 'w') as fp:
+                        save_me = []
+                        for member in generation:
+                            save_me.append({
+                                "features": member.features,
+                                "quality": member.quality,
+                                "recommendations": map(lambda x: {
+                                    "name": names[x],
+                                    "index": x,
+                                    "coordinates": {
+                                        "x": generation[0].x[x],
+                                        "y": generation[0].y[x]
+                                    }
+                                }, member.recommendations)
+                            })
+                        json.dump(save_me, fp)
+                else:
+                    no_improvement += 1
+                    if no_improvement > 8: # 4 generations didn't budge
+                        print("no improvement - quitting")
+                        break
+            except Exception as e:
+                print("failed calculating next generation {}".format(e))
+            # plt.show()
     # the first result of the last generation is the best.

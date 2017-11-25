@@ -7,6 +7,7 @@ class Member:
          self.features = []
          self.x = []
          self.y = []
+         self.recommendations = []
 
      def set_x(self, source):
           del self.x[:]
