@@ -2,6 +2,7 @@ import urllib2, time, getopt, sys, csv, os, math, numpy
 import MySQLdb
 from db import Database
 import json
+import datetime
 
 def get_info():
     global timeTag
@@ -238,12 +239,17 @@ def add_info():
          for i in range (0,len(symbolList)):
              writer.writerow(newRows[i])
     mydb = Database()
-    csvfile = open(combined_file_name, 'r')
-    jsonfile = open(json_combined_file_name, 'w')
-    reader = csv.DictReader(csvfile, headers)
-    jsonresult = json.dumps( [ row for row in reader ] )
-    jsonfile.write(jsonresult)
-    mydb.insert_results(jsonfile)
+
+    mydb.insert_result({"author": "Shy",
+                     "text": "My first blog post!",
+                     "tags": ["mongodb", "python", "pymongo"],
+                     "date": datetime.datetime.utcnow()})
+    # csvfile = open(combined_file_name, 'r')
+    # jsonfile = open(json_combined_file_name, 'w')
+    # reader = csv.DictReader(csvfile, headers)
+    # jsonresult = json.dumps( [ row for row in reader ] )
+    # jsonfile.write(jsonresult)
+    # mydb.insert_results(jsonfile)
     print "Done"
 def main():
     try:
