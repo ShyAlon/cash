@@ -5,7 +5,8 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from multiprocessing import Process, Queue
 import time
-from stockData import read_data
+from solarData import read_data
+# from stockData import read_data
 # from joinedData import read_data
 # from bitterData import read_data
 import json
@@ -15,6 +16,16 @@ from glob import glob
 
 gen_size = 30
 iterations_per_file = 30
+
+def create_full_member(data):
+    member = Member()
+    columns = data.shape[1]
+    vectors = []
+    for column_index in range(0, columns):
+        member.features.append(column_index)
+        vectors.append(data[:, column_index])
+    member.map = np.column_stack(vectors)
+    return member
 
 def create_new_member(data):
     member = Member()
@@ -35,11 +46,12 @@ def create_first_generation(data, colors):
 
     Returns:
         list of results: The generation of results with their respective quality and features."""
-    rows = data.shape[0]
-    result = []
-    for gen_member_index in range(0, gen_size):
+    result = [create_full_member(data)]
+    for gen_member_index in range(1, gen_size):
         new_member = create_new_member(data)
         result.append(new_member)
+
+    # First member is always all the features
 
     order_by_quality(result, colors)
     return result
@@ -190,7 +202,7 @@ def next_generation(data, current, colors):
     return next
 
 if __name__ == '__main__':
-    files = glob("./data/*.csv")
+    files = glob("./data/old/4*.csv")
     file_counter = 0
     for data_file in files:
         file_counter += 1
