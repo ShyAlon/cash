@@ -5,7 +5,8 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from multiprocessing import Process, Queue
 import time
-from solarData import read_data
+from mongoStockData import read_data
+# from solarData import read_data
 # from stockData import read_data
 # from joinedData import read_data
 # from bitterData import read_data
