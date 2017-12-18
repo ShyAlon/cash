@@ -202,52 +202,59 @@ def next_generation(data, current, colors):
     # print (dataBase_emb)
     return next
 
-if __name__ == '__main__':
-    files = glob("./data/old/4*.csv")
-    file_counter = 0
-    for data_file in files:
-        file_counter += 1
-        (data, names, colors) = read_data(data_file)
-        last_quality = 0
-        no_improvement = 0
-        generation = create_first_generation(data, colors)
-        for iteration in range(0, iterations_per_file):
-            try:
-                generation = next_generation(data, generation, colors)
-                print ("***\nFinished generation {}\n***").format(iteration)
-                now = calendar.timegm(time.gmtime())
-                if generation[0].quality > last_quality:
-                    last_quality = generation[0].quality
-                    temp_colors = list(colors)
-                    for recommended in generation[0].recommendations:
-                        temp_colors[recommended] = "black"
-                    no_improvement = 0
-                    plt.gcf().clear()
-                    plt.scatter(generation[0].x, generation[0].y, color=temp_colors)
-                    plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
+def handleDb(file_counter, data_file):
+    (data, names, colors) = read_data(data_file)
+    last_quality = 0
+    no_improvement = 0
+    generation = create_first_generation(data, colors)
+    for iteration in range(0, iterations_per_file):
+        try:
+            generation = next_generation(data, generation, colors)
+            print ("***\nFinished generation {}\n***").format(iteration)
+            now = calendar.timegm(time.gmtime())
+            if generation[0].quality > last_quality:
+                last_quality = generation[0].quality
+                temp_colors = list(colors)
+                for recommended in generation[0].recommendations:
+                    temp_colors[recommended] = "black"
+                no_improvement = 0
+                plt.gcf().clear()
+                plt.scatter(generation[0].x, generation[0].y, color=temp_colors)
+                plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
 
-                    with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration, generation[0].quality), 'w') as fp:
-                        save_me = []
-                        for member in generation:
-                            save_me.append({
-                                "features": member.features,
-                                "quality": member.quality,
-                                "recommendations": map(lambda x: {
-                                    "name": names[x],
-                                    "index": x,
-                                    "coordinates": {
-                                        "x": generation[0].x[x],
-                                        "y": generation[0].y[x]
-                                    }
-                                }, member.recommendations)
-                            })
-                        json.dump(save_me, fp)
-                else:
-                    no_improvement += 1
-                    if no_improvement > 8: # 4 generations didn't budge
-                        print("no improvement - quitting")
-                        break
-            except Exception as e:
-                print("failed calculating next generation {}".format(e))
-            # plt.show()
+                with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration,
+                                                                         generation[0].quality), 'w') as fp:
+                    save_me = []
+                    for member in generation:
+                        save_me.append({
+                            "features": member.features,
+                            "quality": member.quality,
+                            "recommendations": map(lambda x: {
+                                "name": names[x],
+                                "index": x,
+                                "coordinates": {
+                                    "x": generation[0].x[x],
+                                    "y": generation[0].y[x]
+                                }
+                            }, member.recommendations)
+                        })
+                    json.dump(save_me, fp)
+            else:
+                no_improvement += 1
+                if no_improvement > 8:  # 4 generations didn't budge
+                    print("no improvement - quitting")
+                    break
+        except Exception as e:
+            print("failed calculating next generation {}".format(e))
+
+
+if __name__ == '__main__':
+    handleDb(1, "")
+    #
+    # files = glob("./data/old/4*.csv")
+    # file_counter = 0
+    # for data_file in files:
+    #     file_counter += 1
+    #     handleDb(file_counter, data_file)
+
     # the first result of the last generation is the best.
