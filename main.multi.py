@@ -5,7 +5,9 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from multiprocessing import Process, Queue
 import time
-from stockData import read_data
+from mongoStockData import read_data
+# from solarData import read_data
+# from stockData import read_data
 # from joinedData import read_data
 # from bitterData import read_data
 import json
@@ -13,8 +15,19 @@ import calendar
 import os
 from glob import glob
 
-gen_size = 30
+# gen_size = 30
+gen_size = 5
 iterations_per_file = 30
+
+def create_full_member(data):
+    member = Member()
+    columns = data.shape[1]
+    vectors = []
+    for column_index in range(0, columns):
+        member.features.append(column_index)
+        vectors.append(data[:, column_index])
+    member.map = np.column_stack(vectors)
+    return member
 
 def create_new_member(data):
     member = Member()
@@ -35,11 +48,12 @@ def create_first_generation(data, colors):
 
     Returns:
         list of results: The generation of results with their respective quality and features."""
-    rows = data.shape[0]
-    result = []
-    for gen_member_index in range(0, gen_size):
+    result = [create_full_member(data)]
+    for gen_member_index in range(1, gen_size):
         new_member = create_new_member(data)
         result.append(new_member)
+
+    # First member is always all the features
 
     order_by_quality(result, colors)
     return result
@@ -65,26 +79,27 @@ def get_nearest_points(point_index, x, y):
     return distances
 
 def order_by_quality(current, colors):
-    finished = Queue()
+    finished = Queue(gen_size)
     started = 0
     processes = []
     for member in current:
         if member.quality == 0:
-            counter = 1
-            while started - finished.qsize() > 5:
-                if counter % 10 == 0:
-                    print ("waiting {} seconds for other processes to finish in order to start".format(counter))
-                time.sleep(1)
-                counter += 1
+            # counter = 1
+            # while started - finished.qsize() > 5:
+            #     if counter % 10 == 0:
+            #         print ("waiting {} seconds for other processes to finish in order to start".format(counter))
+            #     time.sleep(1)
+            #     counter += 1
             p = Process(target=set_quality, args=(member, colors, finished, started))
             p.start()
             started += 1
             processes.append(p)
+            time.sleep(5)
         else:
             finished.put(member)
 
     counter = 1
-    while finished.qsize() < gen_size:
+    while not finished.full():
         if counter % 10 == 0:
             print ("waiting for {} members to finish".format(gen_size - finished.qsize()))
         counter += 1
@@ -189,52 +204,59 @@ def next_generation(data, current, colors):
     # print (dataBase_emb)
     return next
 
-if __name__ == '__main__':
-    files = glob("./data/*.csv")
-    file_counter = 0
-    for data_file in files:
-        file_counter += 1
-        (data, names, colors) = read_data(data_file)
-        last_quality = 0
-        no_improvement = 0
-        generation = create_first_generation(data, colors)
-        for iteration in range(0, iterations_per_file):
-            try:
-                generation = next_generation(data, generation, colors)
-                print ("***\nFinished generation {}\n***").format(iteration)
-                now = calendar.timegm(time.gmtime())
-                if generation[0].quality > last_quality:
-                    last_quality = generation[0].quality
-                    temp_colors = list(colors)
-                    for recommended in generation[0].recommendations:
-                        temp_colors[recommended] = "black"
-                    no_improvement = 0
-                    plt.gcf().clear()
-                    plt.scatter(generation[0].x, generation[0].y, color=temp_colors)
-                    plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
+def handleDb(file_counter, data_file):
+    (data, names, colors) = read_data(data_file)
+    last_quality = 0
+    no_improvement = 0
+    generation = create_first_generation(data, colors)
+    for iteration in range(0, iterations_per_file):
+        try:
+            generation = next_generation(data, generation, colors)
+            print ("***\nFinished generation {}\n***").format(iteration)
+            now = calendar.timegm(time.gmtime())
+            if generation[0].quality > last_quality:
+                last_quality = generation[0].quality
+                temp_colors = list(colors)
+                for recommended in generation[0].recommendations:
+                    temp_colors[recommended] = "black"
+                no_improvement = 0
+                plt.gcf().clear()
+                plt.scatter(generation[0].x, generation[0].y, color=temp_colors)
+                plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
 
-                    with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration, generation[0].quality), 'w') as fp:
-                        save_me = []
-                        for member in generation:
-                            save_me.append({
-                                "features": member.features,
-                                "quality": member.quality,
-                                "recommendations": map(lambda x: {
-                                    "name": names[x],
-                                    "index": x,
-                                    "coordinates": {
-                                        "x": generation[0].x[x],
-                                        "y": generation[0].y[x]
-                                    }
-                                }, member.recommendations)
-                            })
-                        json.dump(save_me, fp)
-                else:
-                    no_improvement += 1
-                    if no_improvement > 8: # 4 generations didn't budge
-                        print("no improvement - quitting")
-                        break
-            except Exception as e:
-                print("failed calculating next generation {}".format(e))
-            # plt.show()
+                with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration,
+                                                                         generation[0].quality), 'w') as fp:
+                    save_me = []
+                    for member in generation:
+                        save_me.append({
+                            "features": member.features,
+                            "quality": member.quality,
+                            "recommendations": map(lambda x: {
+                                "name": names[x],
+                                "index": x,
+                                "coordinates": {
+                                    "x": generation[0].x[x],
+                                    "y": generation[0].y[x]
+                                }
+                            }, member.recommendations)
+                        })
+                    json.dump(save_me, fp)
+            else:
+                no_improvement += 1
+                if no_improvement > 8:  # 4 generations didn't budge
+                    print("no improvement - quitting")
+                    break
+        except Exception as e:
+            print("failed calculating next generation {}".format(e))
+
+
+if __name__ == '__main__':
+    handleDb(1, "")
+    #
+    # files = glob("./data/old/4*.csv")
+    # file_counter = 0
+    # for data_file in files:
+    #     file_counter += 1
+    #     handleDb(file_counter, data_file)
+
     # the first result of the last generation is the best.

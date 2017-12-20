@@ -29,3 +29,12 @@ class Database:
     def insert_results(self, results):
         result = self.db.results.insert_many(results)
         print (result.inserted_ids)
+
+    def read_data(self):
+        # self.collections = self.db.collection_names(include_system_collections=False)
+        if self.data == []:
+            for result in self.db.results.find({"Data Type": "Joined Stock Data"}).sort([
+                ("Date and Time", pymongo.DESCENDING)
+            ]):
+                self.data = result
+                return result
