@@ -15,7 +15,8 @@ import calendar
 import os
 from glob import glob
 
-gen_size = 30
+# gen_size = 30
+gen_size = 5
 iterations_per_file = 30
 
 def create_full_member(data):
@@ -78,26 +79,27 @@ def get_nearest_points(point_index, x, y):
     return distances
 
 def order_by_quality(current, colors):
-    finished = Queue()
+    finished = Queue(gen_size)
     started = 0
     processes = []
     for member in current:
         if member.quality == 0:
-            counter = 1
-            while started - finished.qsize() > 5:
-                if counter % 10 == 0:
-                    print ("waiting {} seconds for other processes to finish in order to start".format(counter))
-                time.sleep(1)
-                counter += 1
+            # counter = 1
+            # while started - finished.qsize() > 5:
+            #     if counter % 10 == 0:
+            #         print ("waiting {} seconds for other processes to finish in order to start".format(counter))
+            #     time.sleep(1)
+            #     counter += 1
             p = Process(target=set_quality, args=(member, colors, finished, started))
             p.start()
             started += 1
             processes.append(p)
+            time.sleep(5)
         else:
             finished.put(member)
 
     counter = 1
-    while finished.qsize() < gen_size:
+    while not finished.full():
         if counter % 10 == 0:
             print ("waiting for {} members to finish".format(gen_size - finished.qsize()))
         counter += 1
