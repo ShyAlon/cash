@@ -15,8 +15,7 @@ import calendar
 import os
 from glob import glob
 
-# gen_size = 30
-gen_size = 5
+gen_size = 20
 iterations_per_file = 30
 
 def create_full_member(data):
@@ -99,15 +98,16 @@ def order_by_quality(current, colors):
             finished.put(member)
 
     counter = 1
-    while not finished.full():
-        if counter % 10 == 0:
-            print ("waiting for {} members to finish".format(gen_size - finished.qsize()))
-        counter += 1
-        time.sleep(1)
-
     del current[:]
-    while not finished.empty():
-        current.append(finished.get()) # data is OK
+
+    while len(current) < gen_size:
+        if not finished.empty():
+            current.append(finished.get())
+        else:
+            if counter % 10 == 0:
+                print ("waiting for {} members to finish".format(gen_size - len(current)))
+            counter += 1
+            time.sleep(1)
 
     for process in processes:
         process.terminate()
