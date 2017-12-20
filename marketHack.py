@@ -6,11 +6,13 @@ import json
 import csv
 import os
 from multiprocessing import Process, Queue
+from db import Database
 
 API_KEY = '114e933ff74d41b9f4bddeeb74c81ccd&symbol'
 ITERATIONS = 5
 CHUNK_SIZE = 100
-SAMPLES = 100
+SAMPLES = 2
+
 
 def get_data(url, finished, counter):
     try:
@@ -20,13 +22,10 @@ def get_data(url, finished, counter):
         finished.put(0)
     return 0
 
+
 def define_url():
     fields = ''
-    global symbolList
     symbolList = []
-    global urls
-    global fieldList
-    global sample_
     fieldList = []
     
     with open('resources/field_list.csv', 'rb') as f:
@@ -53,17 +52,20 @@ def define_url():
         suffix = (API_KEY, symbols[offset], fields)
         urls.append('http://marketdata.websol.barchart.com/getQuote.json?apikey=%s&symbols=%s&fields=%s' % suffix)
 
-def create_files():
-    stock_data = []
-    del stock_data[:]
+    return urls, symbolList
 
+
+def create_files(urls, symbolList):
+    stock_data = []
+    stock_data_db = {}
+    timeStamp = time.time()
     fileNames = []
     runTime = time.strftime("%Y%m%d-%H%M%S")
-    os.chdir("stockdata")
-    os.makedirs(runTime)
-    os.chdir(runTime)
+
+    os.makedirs("stockdata/"+runTime)
+
     for i in range(0, len(symbolList)):
-        fileNames.append(symbolList[i]+runTime+'.csv')
+        fileNames.append("stockdata/" + runTime + "/" + symbolList[i]+runTime+'.csv')
 
     filedata = {fileName: open(fileName, 'wb') for fileName in fileNames}
     finished = Queue()
@@ -85,23 +87,24 @@ def create_files():
     print ("done retrieving all urls")
     for i in range(0, ITERATIONS):
         stock_data.append(finished.get())
-    # while not finished.empty():
-    #     stock_data.append(finished.get())
 
     for process in processes:
         process.terminate()
-    
+
     jsons = []
+    # del jsons[:]
     for i in range(0, ITERATIONS):
         jsons.append(json.loads(stock_data[i]))
     
     results = []
+    # del results[:]
     for i in range(0, ITERATIONS):
         results.append(jsons[i]["results"])
 
     writer = {k: csv.writer(filedata[fileNames[k]]) for k in range(0, len(fileNames))}
     for i in range(0, len(symbolList)):
         writer[i].writerow(results[0][0].keys())
+        stock_data_db[symbolList[i].replace(".","_")] = [results[0][0].keys()]
 
     for sample in range(0, SAMPLES):
         finished = Queue()
@@ -122,9 +125,6 @@ def create_files():
         for i in range(0, ITERATIONS):
             stock_data.append(finished.get())
         
-        # while not finished.empty():
-        #     stock_data.append(finished.get())
-        
         for process in processes:
             process.terminate()
         
@@ -139,8 +139,19 @@ def create_files():
         for i in range(0, len(results[0])):
             for j in range(0, ITERATIONS):
                 writer[i+j*len(symbolList)/5].writerow(results[j][i].values())
-                
+                stock_data_db[symbolList[i+j*len(symbolList)/5].replace(".", "_")].append(results[j][i].values())
+
         print(sample)
+
+    mydb = Database()
+    data_type = "Raw Stock Data"
+
+    mydb.insert_result({"Data Type": data_type, "Date and Time": runTime, "Time Stamp": timeStamp,
+                        "rows": stock_data_db})
+    print("done")
+
+    return timeStamp, runTime, stock_data_db
+
 
 def main():
     try:
@@ -148,8 +159,9 @@ def main():
     except getopth.GetoptError, err:
         print (str(err))
         sys.exit(2)
-    define_url()
-    create_files()
-    
+    urls, symbolList = define_url()
+    create_files(urls, symbolList)
+
+
 if __name__ == "__main__":
     main()
