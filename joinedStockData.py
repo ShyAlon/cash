@@ -1,94 +1,123 @@
-import urllib2, time, getopt, sys, csv, os, math, numpy
-import MySQLdb
+#import urllib2
+#import time
+import getopt
+import sys
+import csv
+import os
+#import math
+import numpy
 from db import Database
-import json
-import datetime
+#import json
+#import datetime
 
-def get_info():
-    global timeTag
-    timeTag = "20171113-201721"
-    global sampleCount
-    sampleCount = 60
-    global fieldCount
-    fieldCount = 46
-    global symbolCount
-    symbolCount = 500
-    global symbolList
-    symbolList = []
-    global fieldOfBusiness
-    fieldOfBusiness = []
+SAMPLE_COUNT = 2
+FIELD_COUNT = 46
+SYMBOL_COUNT = 500
+
+
+def get_info(time_tag):
+    #global time_tag
+    #time_tag = "20171113-201721"
+    #global sampleCount
+    #sampleCount = 60
+    #global fieldCount
+    #fieldCount = 46
+    #global symbolCount
+    #symbolCount = 500
+    #global symbol_list
+    #global symbols
+    symbol_list = []
+    #global field_of_business
+    field_of_business = []
+    #os.chdir("..")
+    #os.chdir("..")
+
     with open('resources/snp_constituents.csv', 'rb') as f:
         reader = csv.reader(f)
         for row in reader:
-            symbolList.append(row[0])
-            fieldOfBusiness.append(row[2])
-    global symbols
-    symbols = ['']
-    for i in range(0,len(symbolList)):
-        symbols = [symbols[0]+symbolList[i]+',']
-    print (timeTag)
+            symbol_list.append(row[0])
+            field_of_business.append(row[2])
 
-def create_combined_file():
-    os.chdir("stockdata")
-    os.chdir(timeTag)
+    symbols = ['']
+    for i in range(0, len(symbol_list)):
+        symbols = [symbols[0]+symbol_list[i]+',']
+
+    #print (time_tag)
+
+    return symbol_list, field_of_business
+
+
+def create_combined_file(time_tag):
+    #os.chdir("stockdata")
+    #os.chdir(time_tag)
     j = 0
-    while os.path.exists("%s_combined_data_try_%s.csv" %(timeTag ,j)):
+    while os.path.exists("stockdata/" + time_tag + "/%s_combined_data_try_%s.csv" % (time_tag, j)):
         j += 1
-    global combined_file_name
-    global json_combined_file_name
-    combined_file_name = '%s_combined_data_try_%s.csv' %(timeTag ,j)
-    json_combined_file_name = '%s_combined_data_try_%s.json' %(timeTag ,j)
+    #global combined_file_name
+    #global json_combined_file_name
+    combined_file_name = "stockdata/" + time_tag + '/%s_combined_data_try_%s.csv' % (time_tag, j)
+    #json_combined_file_name = '%s_combined_data_try_%s.json' %(time_tag ,j)
     with open(combined_file_name, 'wb') as f:
         reader = csv.reader(f)
 
-def add_headers():
-    headers = ['priceAvg']
-    with open(combined_file_name, 'wb') as f:
-        writer = csv.DictWriter(f, headers)
-        writer.writeheader()
+    return combined_file_name
+    #return json_combined_file_name
 
-def get_priceChange(comparedPrice):
-    priceChange = lastPrice[sampleCount-1]-comparedPrice
-    if comparedPrice == 0:
-        priceChangePrecentage = 0
+
+# def add_headers():
+#     headers = ['priceAvg']
+#     with open(combined_file_name, 'wb') as f:
+#         writer = csv.DictWriter(f, headers)
+#         writer.writeheader()
+
+
+def get_price_change(compared_price):
+    price_change = last_price[SAMPLE_COUNT-1]-compared_price
+    if compared_price == 0:
+        price_change_percentage = 0
     else:
-        priceChangePrecentage = priceChange/comparedPrice
-    return priceChange, priceChangePrecentage
+        price_change_percentage = price_change/compared_price
+    return price_change, price_change_percentage
+
 
 def get_bidChange(comparedBid):
-    bidChange = bid[sampleCount-1]-comparedBid
+    bidChange = bid[SAMPLE_COUNT-1]-comparedBid
     if comparedBid == 0:
         bidChangePrecentage = 0
     else:
         bidChangePrecentage = bidChange/comparedBid
     return bidChange, bidChangePrecentage
 
+
 def get_askChange(comparedAsk):
-    askChange = ask[sampleCount-1]-comparedAsk
+    askChange = ask[SAMPLE_COUNT-1]-comparedAsk
     if comparedAsk == 0:
         askChangePrecentage = 0
     else:
         askChangePrecentage = askChange/comparedAsk
     return askChange, askChangePrecentage
 
-def add_info():
-    fileName = 'A20170929-180854.csv'
-    global headers
-    headers = ['Symbol' , 'priceChange', 'priceChange%', 'priceAvg', 'variance', 'volatility','previousCloseChange', 'previousCloseChange%', 'openChange', 'openChange%', 'highChange', 'highChange%', 'lowChange', 'lowChange%', 'yearHighChange', 'yearHighChange%', 'yearLowChange', 'yearLowChange%', 'matchedYearHigh', 'matchedYearLow', 'bidAvg', 'bidVar', 'bidVolatility', 'bidChange', 'bidChange%', 'askAvg', 'askVar', 'askVolatility', 'askChange', 'askChange%', 'tradeSizeAvg', 'tradeSizeAvg$', 'bidSizeAvg', 'bidSizeAvg$', 'askSizeAvg', 'askSizeAvg$', 'maxTradeSize', 'maxAskSize', 'maxBidSize', 'maxTradeSize$', 'maxAskSize$', 'maxBidSize$', 'Consumer_Discretionary', 'Consumer_Staples', 'Energy', 'Financials', 'Health_Care', 'Industrials', 'Information Technology', 'Materials', 'Real_Estate', 'Telecommunications_Services', 'Utilities', 'matchedDayHigh', 'matchedDayLow', 'sampleTo20DaysVolume', 'sampleToYearVolume', 'sharesOutstanding', 'maxTradeSizeToSharesOutstanding', 'dividendYieldAnnual', 'dividendRateAnnual']
+
+def add_info(symbol_list, field_of_business, combined_file_name, time_tag, stock_data_db):
+    #fileName = 'A20170929-180854.csv'
+    #global headers
+    combined_stock_data = []
+    headers = ['Symbol', 'price_change', 'price_change%', 'priceAvg', 'variance', 'volatility','previousCloseChange', 'previousCloseChange%', 'openChange', 'openChange%', 'highChange', 'highChange%', 'lowChange', 'lowChange%', 'yearHighChange', 'yearHighChange%', 'yearLowChange', 'yearLowChange%', 'matchedYearHigh', 'matchedYearLow', 'bidAvg', 'bidVar', 'bidVolatility', 'bidChange', 'bidChange%', 'askAvg', 'askVar', 'askVolatility', 'askChange', 'askChange%', 'tradeSizeAvg', 'tradeSizeAvg$', 'bidSizeAvg', 'bidSizeAvg$', 'askSizeAvg', 'askSizeAvg$', 'maxTradeSize', 'maxAskSize', 'maxBidSize', 'maxTradeSize$', 'maxAskSize$', 'maxBidSize$', 'Consumer_Discretionary', 'Consumer_Staples', 'Energy', 'Financials', 'Health_Care', 'Industrials', 'Information Technology', 'Materials', 'Real_Estate', 'Telecommunications_Services', 'Utilities', 'matchedDayHigh', 'matchedDayLow', 'sampleTo20DaysVolume', 'sampleToYearVolume', 'sharesOutstanding', 'maxTradeSizeToSharesOutstanding', 'dividendYieldAnnual', 'dividendRateAnnual']
+    combined_stock_data["headers"] = headers
     newRows = []
-    for i in range(0,len(symbolList)):
-        with open(symbolList[i]+timeTag+'.csv', 'rb') as f:
+    for i in range(0,len(symbol_list)):
+        with open("stockdata/" + time_tag + "/" + symbol_list[i]+time_tag+'.csv', 'rb') as f:
             reader = csv.DictReader(f)
-            priceSum = 0
-            var = 0
-            bidVar = 0
-            askVar = 0
-            volatility = 0
-            bidVolatility = 0
-            askVolatility = 0
-            relativeRate = 1.06 #3month US Gov bonds rate
-            global lastPrice 
-            lastPrice = []
+            #priceSum = 0
+            #var = 0
+            #bidVar = 0
+            #askVar = 0
+            #volatility = 0
+            #bidVolatility = 0
+            #askVolatility = 0
+            #relativeRate = 1.06 #3month US Gov bonds rate
+            global last_price
+            last_price = []
             global bid
             bid = []
             global ask
@@ -99,9 +128,9 @@ def add_info():
             volume = []
             for row in reader:
                 if row['lastPrice'] is None or row['lastPrice'] == "":
-                    lastPrice.append(0)
+                    last_price.append(0)
                 else:
-                    lastPrice.append(float(row['lastPrice']))
+                    last_price.append(float(row['lastPrice']))
                 if row['bid'] is None or row['bid'] == "":
                     bid.append(0)
                 else:
@@ -183,9 +212,15 @@ def add_info():
                 else:
                     dividendRateAnnual = float(row['dividendRateAnnual'])
             sampleVolume = sum(tradeSize)
-            sampleTo20DaysVolume = sampleVolume/twentyDayAvgVol
-            sampleToYearVolume = sampleVolume/yearAvgVolume
-            priceAvg = numpy.mean(lastPrice)
+            if (twentyDayAvgVol>0):
+                sampleTo20DaysVolume = sampleVolume/twentyDayAvgVol
+            else:
+                sampleTo20DaysVolume = 0
+            if (yearAvgVolume>0):
+                sampleToYearVolume = sampleVolume/yearAvgVolume
+            else:
+                sampleToYearVolume = 0
+            priceAvg = numpy.mean(last_price)
             bidAvg = numpy.mean(bid)
             askAvg = numpy.mean(ask)
             tradeSizeAvg = numpy.mean(tradeSize)  
@@ -200,56 +235,48 @@ def add_info():
             maxTradeSizeDollars = maxTradeSize*priceAvg
             maxAskSizeDollars = maxAskSize*askAvg
             maxBidSizeDollars = maxBidSize*bidAvg
-            var = numpy.var(lastPrice)
+            var = numpy.var(last_price)
             bidVar = numpy.var(bid)
             askVar = numpy.var(ask)
-            volatility = numpy.std(lastPrice)
+            volatility = numpy.std(last_price)
             bidVolatility = numpy.std(bid)
             askVolatility = numpy.std(ask)
-            priceChange, priceChangePrecentage = get_priceChange(lastPrice[0])
+            price_change, price_change_percentage = get_price_change(last_price[0])
             bidChange, bidChangePrecentage = get_bidChange(bid[0])
             askChange, askChangePrecentage = get_askChange(ask[0])
-            previousCloseChange, previousCloseChangePrecentage = get_priceChange(previousClose)
-            openChange, openChangePrecentage = get_priceChange(openPrice)
-            highChange, highChangePrecentage = get_priceChange(high)
-            lowChange, lowChangePrecentage = get_priceChange(low)
-            yearHighChange, yearHighChangePrecentage = get_priceChange(yearHigh)
-            yearLowChange, yearLowChangePrecentage = get_priceChange(yearLow)
-            matchedYearHigh = int(lastPrice.__contains__(yearHigh))
-            matchedYearLow = int(lastPrice.__contains__(yearLow))
-            matchedDayHigh = int(lastPrice.__contains__(high))
-            matchedDayLow = int(lastPrice.__contains__(low))
-            Consumer_Discretionary = int(fieldOfBusiness[i] == 'Consumer Discretionary')
-            Consumer_Staples = int(fieldOfBusiness[i] == 'Consumer Staples')
-            Energy = int(fieldOfBusiness[i] == 'Energy')
-            Financials = int(fieldOfBusiness[i] == 'Financials')
-            Health_Care = int(fieldOfBusiness[i] == 'Health Care')
-            Industrials = int(fieldOfBusiness[i] == 'Industrials')
-            Information_Technology = int(fieldOfBusiness[i] == 'Information Technology')
-            Materials = int(fieldOfBusiness[i] == 'Materials')
-            Real_Estate = int(fieldOfBusiness[i] == 'Real Estate')
-            Telecommunications_Services = int(fieldOfBusiness[i] == 'Telecommunications Services')
-            Utilities = int(fieldOfBusiness[i] == 'Utilities')
+            previousCloseChange, previousCloseChangePrecentage = get_price_change(previousClose)
+            openChange, openChangePrecentage = get_price_change(openPrice)
+            highChange, highChangePrecentage = get_price_change(high)
+            lowChange, lowChangePrecentage = get_price_change(low)
+            yearHighChange, yearHighChangePrecentage = get_price_change(yearHigh)
+            yearLowChange, yearLowChangePrecentage = get_price_change(yearLow)
+            matchedYearHigh = int(last_price.__contains__(yearHigh))
+            matchedYearLow = int(last_price.__contains__(yearLow))
+            matchedDayHigh = int(last_price.__contains__(high))
+            matchedDayLow = int(last_price.__contains__(low))
+            Consumer_Discretionary = int(field_of_business[i] == 'Consumer Discretionary')
+            Consumer_Staples = int(field_of_business[i] == 'Consumer Staples')
+            Energy = int(field_of_business[i] == 'Energy')
+            Financials = int(field_of_business[i] == 'Financials')
+            Health_Care = int(field_of_business[i] == 'Health Care')
+            Industrials = int(field_of_business[i] == 'Industrials')
+            Information_Technology = int(field_of_business[i] == 'Information Technology')
+            Materials = int(field_of_business[i] == 'Materials')
+            Real_Estate = int(field_of_business[i] == 'Real Estate')
+            Telecommunications_Services = int(field_of_business[i] == 'Telecommunications Services')
+            Utilities = int(field_of_business[i] == 'Utilities')
             maxTradeSizeToSharesOutstanding = maxTradeSize/sharesOutstanding
-            newRows.append([symbolList[i], priceChange, priceChangePrecentage, priceAvg, var, volatility, previousCloseChange, previousCloseChangePrecentage, openChange, openChangePrecentage, highChange, highChangePrecentage, lowChange, lowChangePrecentage, yearHighChange, yearHighChangePrecentage, yearLowChange, yearLowChangePrecentage, matchedYearHigh, matchedYearLow, bidAvg, bidVar, bidVolatility, bidChange, bidChangePrecentage, askAvg, askVar, askVolatility, askChange, askChangePrecentage, tradeSizeAvg, tradeSizeAvgDollars, bidSizeAvg, bidSizeAvgDollars, askSizeAvg, askSizeAvgDollars,maxTradeSize, maxAskSize, maxBidSize, maxTradeSizeDollars, maxAskSizeDollars, maxBidSizeDollars, Consumer_Discretionary, Consumer_Staples, Energy, Financials, Health_Care, Industrials, Information_Technology, Materials, Real_Estate, Telecommunications_Services, Utilities, matchedDayHigh, matchedDayLow, sampleTo20DaysVolume, sampleToYearVolume, sharesOutstanding, maxTradeSizeToSharesOutstanding, dividendYieldAnnual, dividendRateAnnual])
+            newRows.append([symbol_list[i], price_change, price_change_percentage, priceAvg, var, volatility, previousCloseChange, previousCloseChangePrecentage, openChange, openChangePrecentage, highChange, highChangePrecentage, lowChange, lowChangePrecentage, yearHighChange, yearHighChangePrecentage, yearLowChange, yearLowChangePrecentage, matchedYearHigh, matchedYearLow, bidAvg, bidVar, bidVolatility, bidChange, bidChangePrecentage, askAvg, askVar, askVolatility, askChange, askChangePrecentage, tradeSizeAvg, tradeSizeAvgDollars, bidSizeAvg, bidSizeAvgDollars, askSizeAvg, askSizeAvgDollars,maxTradeSize, maxAskSize, maxBidSize, maxTradeSizeDollars, maxAskSizeDollars, maxBidSizeDollars, Consumer_Discretionary, Consumer_Staples, Energy, Financials, Health_Care, Industrials, Information_Technology, Materials, Real_Estate, Telecommunications_Services, Utilities, matchedDayHigh, matchedDayLow, sampleTo20DaysVolume, sampleToYearVolume, sharesOutstanding, maxTradeSizeToSharesOutstanding, dividendYieldAnnual, dividendRateAnnual])
     print (combined_file_name)
     with open(combined_file_name, 'wb') as f:
          writer = csv.writer(f)
          writer.writerow(headers)
-         for i in range (0,len(symbolList)):
+         for i in range (0,len(symbol_list)):
              writer.writerow(newRows[i])
     mydb = Database()
-
-    mydb.insert_result({"author": "Shy",
-                     "text": "My first blog post!",
-                     "tags": ["mongodb", "python", "pymongo"],
-                     "date": datetime.datetime.utcnow()})
-    # csvfile = open(combined_file_name, 'r')
-    # jsonfile = open(json_combined_file_name, 'w')
-    # reader = csv.DictReader(csvfile, headers)
-    # jsonresult = json.dumps( [ row for row in reader ] )
-    # jsonfile.write(jsonresult)
-    # mydb.insert_results(jsonfile)
+    data_type = "Joined Stock Data"
+    #time_stamp = time.mktime(int(time_tag).timetuple())
+    mydb.insert_result({"Data Type":data_type, "Date and Time":time_tag, "Headers":headers, "rows":newRows})
     print "Done"
 def main():
     try:
@@ -257,10 +284,12 @@ def main():
     except getopth.GetoptError, err:
         print (str(err))
         sys.exit(2)
-    get_info()
-    create_combined_file()
-    add_headers()
-    add_info()
+    symbol_list, field_of_business = get_info(time_tag="20171218-140923")
+    combined_file_name = create_combined_file(time_tag="20171218-140923")
+    #add_headers()
+    mydb = Database()
+    stock_data_db = mydb.pull_last_result()
+    add_info(symbol_list, field_of_business, combined_file_name, time_tag="20171218-140923", stock_data_db = stock_data_db)
     #define_url()
     
 if __name__ == "__main__":
