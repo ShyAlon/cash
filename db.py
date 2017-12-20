@@ -38,3 +38,11 @@ class Database:
             ]):
                 self.data = result
                 return result
+
+    def insert_result(self, result):
+        retval = self.db.results.insert_one(result)
+        #print (retval.inserted_id)
+
+    def pull_last_result(self):
+        sort = {'_id': pymongo.DESCENDING}
+        return self.db.results.find({"Data Type":"Raw Stock Data"}, limit=1).sort([("Time Stamp",pymongo.DESCENDING)])[0]
