@@ -1,15 +1,15 @@
 import numpy as np
 from db import Database
 
-def read_data(file_name):
+def read_data(index):
     """ read the data from whereever
         remove """
     # file_name = './data/20171017-214145_combined_data_try_0.csv'
     db = Database()
-    data_object = db.read_data()
-    data = np.array(data_object["rows"])[:, 1:].astype(np.float)
-    names = data_object["Headers"]
-    priceChange = data[:, 2]
+    data_object = db.read_data(index)
+    data = np.array(data_object["rows"].values())[:, 1:].astype(np.float)
+    names = data_object["headers"]
+    priceChange = data[:, 1]
     mean = priceChange.mean()
     std = priceChange.std()
     priceDev = (priceChange - mean) / std

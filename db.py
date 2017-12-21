@@ -30,14 +30,20 @@ class Database:
         result = self.db.results.insert_many(results)
         print (result.inserted_ids)
 
-    def read_data(self):
+    def read_data(self, index):
         # self.collections = self.db.collection_names(include_system_collections=False)
+        target = 0
         if self.data == []:
-            for result in self.db.results.find({"Data Type": "Joined Stock Data"}).sort([
-                ("Date and Time", pymongo.DESCENDING)
+            for result in self.db.results.find({"data_type": "joined_stock_data"}).sort([
+                ("date_and_time", pymongo.DESCENDING)
             ]):
-                self.data = result
-                return result
+                if target >= index:
+                    self.data = result
+                    print("Getting result #{}".format(target))
+                    return result
+                else:
+                    target += 1
+
 
     def insert_result(self, result):
         retval = self.db.results.insert_one(result)
