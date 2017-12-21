@@ -12,11 +12,11 @@ from mongoStockData import read_data
 # from bitterData import read_data
 import json
 import calendar
+import traceback
 import os
 from glob import glob
 
-# gen_size = 30
-gen_size = 5
+gen_size = 20
 iterations_per_file = 30
 
 def create_full_member(data):
@@ -99,15 +99,16 @@ def order_by_quality(current, colors):
             finished.put(member)
 
     counter = 1
-    while not finished.full():
-        if counter % 10 == 0:
-            print ("waiting for {} members to finish".format(gen_size - finished.qsize()))
-        counter += 1
-        time.sleep(1)
-
     del current[:]
-    while not finished.empty():
-        current.append(finished.get()) # data is OK
+
+    while len(current) < gen_size:
+        if not finished.empty():
+            current.append(finished.get())
+        else:
+            if counter % 10 == 0:
+                print ("waiting for {} members to finish".format(gen_size - len(current)))
+            counter += 1
+            time.sleep(1)
 
     for process in processes:
         process.terminate()
@@ -204,8 +205,8 @@ def next_generation(data, current, colors):
     # print (dataBase_emb)
     return next
 
-def handleDb(file_counter, data_file):
-    (data, names, colors) = read_data(data_file)
+def handleDb(file_counter):
+    (data, names, colors) = read_data(file_counter)
     last_quality = 0
     no_improvement = 0
     generation = create_first_generation(data, colors)
@@ -221,7 +222,19 @@ def handleDb(file_counter, data_file):
                     temp_colors[recommended] = "black"
                 no_improvement = 0
                 plt.gcf().clear()
-                plt.scatter(generation[0].x, generation[0].y, color=temp_colors)
+                colorSet = set(temp_colors)
+                colorCollections = {}
+                for color in colorSet:
+                    colorCollections[color] = {"x": [], "y": []}
+
+                for i in range(0, len(generation[0].x)):
+                    colorCollections[temp_colors[i]]["x"].append(generation[0].x[i])
+                    colorCollections[temp_colors[i]]["y"].append(generation[0].y[i])
+
+                for color in colorSet:
+                    plt.scatter(colorCollections[color]["x"], colorCollections[color]["y"], color=color, label=color)
+
+                plt.legend()
                 plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
 
                 with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration,
@@ -235,8 +248,8 @@ def handleDb(file_counter, data_file):
                                 "name": names[x],
                                 "index": x,
                                 "coordinates": {
-                                    "x": generation[0].x[x],
-                                    "y": generation[0].y[x]
+                                    "x": member.x[x],
+                                    "y": member.y[x]
                                 }
                             }, member.recommendations)
                         })
@@ -248,10 +261,13 @@ def handleDb(file_counter, data_file):
                     break
         except Exception as e:
             print("failed calculating next generation {}".format(e))
+            tb = traceback.format_exc()
+            print(tb)
 
 
 if __name__ == '__main__':
-    handleDb(1, "")
+    for i in range(0, 3):
+        handleDb(i)
     #
     # files = glob("./data/old/4*.csv")
     # file_counter = 0
