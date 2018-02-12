@@ -44,6 +44,7 @@ class Database:
                 else:
                     target += 1
 
+                    
 
     def insert_result(self, result):
         retval = self.db.results.insert_one(result)

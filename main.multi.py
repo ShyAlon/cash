@@ -19,6 +19,7 @@ from glob import glob
 gen_size = 20
 iterations_per_file = 30
 
+
 def create_full_member(data):
     member = Member()
     columns = data.shape[1]
@@ -29,23 +30,24 @@ def create_full_member(data):
     member.map = np.column_stack(vectors)
     return member
 
+
 def create_new_member(data):
     member = Member()
-    columns = data.shape[1] 
+    columns = data.shape[1]
     vectors = []
     for column_index in range(0, columns):
-        if np.random.randint(0,2) > 0:
+        if np.random.randint(0, 2) > 0:
             member.features.append(column_index)
             vectors.append(data[:, column_index])
     member.map = np.column_stack(vectors)
     return member
+
 
 def create_first_generation(data, colors):
     """
     Create the first generation of the data.
     Args:
         data (np.array): the matrix representing the input
-
     Returns:
         list of results: The generation of results with their respective quality and features."""
     result = [create_full_member(data)]
@@ -58,25 +60,28 @@ def create_first_generation(data, colors):
     order_by_quality(result, colors)
     return result
 
+
 def get_nearest_point(point_index, x, y):
     result = -1
     min_distance = float("inf")
     for index in range(0, len(x)):
         if index != point_index:
-            distance_squared = (x[point_index] - x[index])**2 + (y[point_index] - y[index])**2 
+            distance_squared = (x[point_index] - x[index]) ** 2 + (y[point_index] - y[index]) ** 2
             if distance_squared < min_distance:
                 result = index
                 min_distance = distance_squared
     return result
 
+
 def get_nearest_points(point_index, x, y):
     distances = []
     for index in range(0, len(x)):
         if index != point_index:
-            distance_squared = (x[point_index] - x[index])**2 + (y[point_index] - y[index])**2
+            distance_squared = (x[point_index] - x[index]) ** 2 + (y[point_index] - y[index]) ** 2
             distances.append((index, distance_squared))
     distances.sort(key=lambda distance: distance[1])
     return distances
+
 
 def order_by_quality(current, colors):
     finished = Queue(gen_size)
@@ -113,7 +118,7 @@ def order_by_quality(current, colors):
     for process in processes:
         process.terminate()
 
-    current.sort(key=lambda x: x.quality, reverse=True) # still ok
+    current.sort(key=lambda x: x.quality, reverse=True)  # still ok
     print("Top quality {}".format(current[0].quality))
 
 
@@ -121,7 +126,7 @@ def set_quality(member, colors, finished, started):
     try:
         print("starting calculating t-SNE member {}".format(started))
         output = TSNE().fit_transform(member.map)
-        x,y = output.T
+        x, y = output.T
         member.set_x(x)
         member.set_y(y)
         total = 0.0
@@ -145,11 +150,12 @@ def set_quality(member, colors, finished, started):
                     member.recommendations.append(point_index)
         print("finished calculating t-SNE member {} quality {}".format(started, member.quality))
         finished.put(member)
-    except Exception :
+    except Exception:
         print("failed calculating t-SNE member {}".format(started))
         member.quality = 0
         finished.put(member)
     return 0
+
 
 def cross_breed(father, mother, data):
     member = Member()
@@ -159,18 +165,19 @@ def cross_breed(father, mother, data):
         if features[column_index] in mother.features and features[column_index] in father.features:
             member.features.append(column_index)
             vectors.append(data[:, column_index])
-        elif np.random.randint(0,2) > 0:
+        elif np.random.randint(0, 2) > 0:
             member.features.append(column_index)
             vectors.append(data[:, column_index])
     member.map = np.column_stack(vectors)
     return member
+
 
 def mutate(source, data):
     member = Member()
     vectors = []
     random = create_new_member(data)
     for column_index in range(0, len(source.features)):
-        if  np.random.randint(0, 10) > 3:
+        if np.random.randint(0, 10) > 3:
             member.features.append(column_index)
             vectors.append(data[:, column_index])
     for column_index in range(0, len(random.features)):
@@ -180,30 +187,31 @@ def mutate(source, data):
     member.map = np.column_stack(vectors)
     return member
 
+
 def next_generation(data, current, colors):
     """
     Create the next generation from the previous one
     Args:
         data (np.array):    the matrix representing the input
-        current (list):     the current generation 
-
+        current (list):     the current generation
     Returns:
         list: The generation of results with their respective quality and features."""
     next = []
-    for copies in range(0, gen_size/3):
+    for copies in range(0, gen_size / 3):
         next.append(current[copies])
 
-    for cross in range(0, gen_size/4):
-        next.append(cross_breed(current[cross], current[cross+1], data))
-        next.append(cross_breed(current[cross], current[cross+2], data))
-    
+    for cross in range(0, gen_size / 4):
+        next.append(cross_breed(current[cross], current[cross + 1], data))
+        next.append(cross_breed(current[cross], current[cross + 2], data))
+
     for mutant in range(0, gen_size - len(next)):
         next.append(mutate(current[mutant], data))
 
     order_by_quality(next, colors)
-       
+
     # print (dataBase_emb)
     return next
+
 
 def handleDb(file_counter):
     (data, names, colors) = read_data(file_counter)
@@ -256,7 +264,7 @@ def handleDb(file_counter):
                     json.dump(save_me, fp)
             else:
                 no_improvement += 1
-                if no_improvement > 8:  # 4 generations didn't budge
+                if no_improvement > 4:  # 4 generations didn't budge
                     print("no improvement - quitting")
                     break
         except Exception as e:
@@ -266,6 +274,7 @@ def handleDb(file_counter):
 
 
 if __name__ == '__main__':
+
     for i in range(0, 3):
         handleDb(i)
     #
