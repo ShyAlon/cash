@@ -58,10 +58,11 @@ def define_url():
 def create_files(urls, symbolList):
     stock_data = []
     stock_data_db = {}
-    timeStamp = time.time()
+    time_stamp = time.time()
     runTime = time.strftime("%Y%m%d-%H%M%S")
     sample = 0
     while sample<SAMPLES:
+        time_stamp = time.time()
         finished = Queue()
         processes = []
         for i in range(ITERATIONS):
@@ -104,21 +105,28 @@ def create_files(urls, symbolList):
         if sample == 0:
             for j in range(0, len(symbolList)):
                 stock_data_db[symbolList[j].replace(".", "_")] = [results[0][0].keys()]
+        mydb = Database()
+        data_type = "full_single_sample"
 
         for i in range(0, len(results[0])):
             for j in range(0, ITERATIONS):
-                stock_data_db[results[j][i].values()[23].replace(".","_")].append(results[j][i].values())
+                stock_data_db[results[j][i].values()[23].replace(".","_")] = results[j][i].values()
+
+        ret_val = {"data_type": data_type, "date_and_time": runTime, "time_stamp": time_stamp, "rows": stock_data_db}
+        mydb.insert_result(ret_val)
         sample += 1
+        print(sample)
+        time.sleep(20)
         print(sample)
 
     #mydb = Database()
     data_type = "raw_stock_data"
-    ret_val = {"data_type": data_type, "date_and_time": runTime, "time_stamp": timeStamp, "rows": stock_data_db,
+    ret_val = {"data_type": data_type, "date_and_time": runTime, "time_stamp": time_stamp, "rows": stock_data_db,
               "samples": SAMPLES}
     #mydb.insert_result(retVal)
     print("done")
 
-    return timeStamp, runTime, ret_val
+    return time_stamp, runTime, ret_val
 
 
 def main():
