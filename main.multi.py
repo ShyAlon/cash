@@ -274,13 +274,14 @@ def handleDb(file_counter):
 
 
 if __name__ == '__main__':
-    for i in range(4, 7):
-        handleDb(i)
-        #
-        # files = glob("./data/old/4*.csv")
-        # file_counter = 0
-        # for data_file in files:
-        #     file_counter += 1
-        #     handleDb(file_counter, data_file)
 
-        # the first result of the last generation is the best.
+    for i in range(0, 3):
+        handleDb(i)
+    #
+    # files = glob("./data/old/4*.csv")
+    # file_counter = 0
+    # for data_file in files:
+    #     file_counter += 1
+    #     handleDb(file_counter, data_file)
+
+    # the first result of the last generation is the best.
