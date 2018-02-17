@@ -206,7 +206,7 @@ def next_generation(data, current, colors):
     return next
 
 def handleDb(file_counter):
-    (data, names, colors) = read_data(file_counter)
+    (data, names, colors, assets, date_and_time) = read_data(file_counter)
     last_quality = 0
     no_improvement = 0
     generation = create_first_generation(data, colors)
@@ -214,6 +214,9 @@ def handleDb(file_counter):
         try:
             generation = next_generation(data, generation, colors)
             print ("***\nFinished generation {}\n***").format(iteration)
+            directory = "./results/{}".format(date_and_time)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
             now = calendar.timegm(time.gmtime())
             if generation[0].quality > last_quality:
                 last_quality = generation[0].quality
@@ -235,23 +238,31 @@ def handleDb(file_counter):
                     plt.scatter(colorCollections[color]["x"], colorCollections[color]["y"], color=color, label=color)
 
                 plt.legend()
-                plt.savefig("./results/result_{}_{}_{}.png".format(file_counter, now, generation[0].quality))
+                plt.savefig("./results/{}/result_{}_{}_{}.png".format(date_and_time, file_counter, now, generation[0].quality))
 
-                with open('./results/generation_{}_{}_{}_{}.json'.format(file_counter, now, iteration,
+                with open('./results/{}/generation_{}_{}_{}_{}.json'.format(date_and_time, file_counter, now, iteration,
                                                                          generation[0].quality), 'w') as fp:
                     save_me = []
                     for member in generation:
+                        recommendations = []
+                        for x in member.recommendations:
+                            try:
+                                recommendations.append({
+                                        "name": assets[x],
+                                        "index": x,
+                                        "coordinates": {
+                                            "x": member.x[x],
+                                            "y": member.y[x]
+                                        }
+                                    })
+                            except Exception as ex:
+                                print("failed aooending recommendation {}".format(ex))
+                                tb = traceback.format_exc()
+                                print(tb)
                         save_me.append({
                             "features": member.features,
                             "quality": member.quality,
-                            "recommendations": map(lambda x: {
-                                "name": names[x],
-                                "index": x,
-                                "coordinates": {
-                                    "x": member.x[x],
-                                    "y": member.y[x]
-                                }
-                            }, member.recommendations)
+                            "recommendations": recommendations
                         })
                     json.dump(save_me, fp)
             else:
@@ -266,7 +277,7 @@ def handleDb(file_counter):
 
 
 if __name__ == '__main__':
-    for i in range(0, 3):
+    for i in range(0, 1):
         handleDb(i)
     #
     # files = glob("./data/old/4*.csv")

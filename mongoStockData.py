@@ -9,6 +9,7 @@ def read_data(index):
     data_object = db.read_data(index)
     data = np.array(data_object["rows"].values())[:, 1:].astype(np.float)
     names = data_object["headers"]
+    assets = np.array(data_object["rows"].values())[:, 0]
     priceChange = data[:, 1]
     mean = priceChange.mean()
     std = priceChange.std()
@@ -19,7 +20,7 @@ def read_data(index):
     tags = tags - (priceDev < -2).astype(int)
     vfunc = np.vectorize(to_color)
     colors = vfunc(tags)
-    return (data, names, colors)
+    return (data, names, colors, assets, data_object['date_and_time'])
 
 def to_color(num):
     if num <= -2:
